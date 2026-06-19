@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
+<title>持株会シミュレーター｜株式会社良品計画</title>
+<style>
+  :root{
+    --bg:#f5f6f8; --card:#fff; --ink:#222b36; --sub:#6b7682;
+    --line:#e1e6eb; --brand:#1f6feb; --brand-d:#1751b8;
+    --nomura:#2f7ed8; --point:#f2a93b; --good:#2e9e6b; --div:#8e6fd8; --cum:#374151;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.55;font-size:15px;-webkit-text-size-adjust:100%;
+    /* 下部固定バーに隠れないよう余白を確保 */
+    padding-bottom:calc(78px + env(safe-area-inset-bottom))}
+
+  /* 通常スクロールのヘッダ（上部・スクロールで流れる） */
+  header{background:#fff;border-bottom:2px solid var(--brand);padding:12px 16px;text-align:center}
+  header h1{margin:0;font-size:1.12rem;letter-spacing:.02em}
+  header .co{font-size:.78rem;color:var(--sub);margin-top:3px}
+
+  /* ===== 下部固定の結果バー ===== */
+  .bottombar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:2px solid var(--brand);
+    box-shadow:0 -2px 10px rgba(0,0,0,.08);padding:8px 14px;
+    padding-bottom:calc(8px + env(safe-area-inset-bottom))}
+  .bottombar .inner{max-width:880px;margin:0 auto;display:flex;gap:8px;align-items:stretch}
+  .rb-cell{background:linear-gradient(135deg,#eef5ff,#e6efff);border:1px solid #cfe0ff;border-radius:9px;
+    padding:5px 10px;min-width:0}
+  .rb-cell.main{flex:1}
+  .rb-cell.gaincell{flex:0 0 auto;background:#f1f8f4;border-color:#cfe9d9}
+  .rb-lab{display:block;font-size:.64rem;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rb-val{display:block;font-size:1.25rem;font-weight:800;color:var(--brand-d);line-height:1.25;white-space:nowrap}
+  .rb-gain{display:block;font-size:1.02rem;font-weight:800;color:var(--good);line-height:1.25;white-space:nowrap}
+
+  .wrap{max-width:880px;margin:0 auto;padding:14px}
+  .colead{text-align:center;font-size:.76rem;color:var(--sub);margin:0 0 12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+  .card h2{font-size:.95rem;margin:0 0 12px;color:var(--sub)}
+  /* 主要カード（基本設定・結果）は下地を区別 */
+  .card.key{background:linear-gradient(180deg,#f3f8ff,#fff);border-color:#bcd3f5;box-shadow:0 1px 5px rgba(31,111,235,.08)}
+  .card.key>h2{color:var(--brand-d)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:520px){.grid{grid-template-columns:1fr}}
+  .grid.basic{grid-template-columns:1fr}  /* 基本設定は順序優先で1カラム */
+  .pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}  /* 常に左右2列 */
+  label.field{display:block;font-size:.8rem;color:var(--sub);margin-bottom:3px;font-weight:600}
+  .hint{font-size:.72rem;color:#8a94a0;font-weight:400;margin-top:3px}
+  .hint.nowrap{white-space:nowrap;font-size:.68rem}
+  .lockwrap{position:relative}
+  .lockwrap input{padding-right:46px}
+  .lockbtn{position:absolute;top:50%;right:6px;transform:translateY(-50%);width:34px;height:34px;padding:0;
+    border:1px solid var(--line);background:#fff;border-radius:8px;font-size:1.05rem;line-height:1;cursor:pointer;
+    display:flex;align-items:center;justify-content:center}
+  .lockbtn[aria-pressed="false"]{background:#eef4ff;border-color:#9dbff5}
+  input[type=number],select{width:100%;padding:9px 10px;border:1px solid var(--line);
+    border-radius:8px;font-size:1rem;background:#fff;color:var(--ink)}
+  input:disabled{background:#f1f3f5;color:#5a6571}
+  input:focus,select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(31,111,235,.12)}
+  .toggle{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .toggle button{border:none;background:#fff;padding:8px 16px;font-size:.85rem;cursor:pointer;color:var(--sub)}
+  .toggle button.on{background:var(--brand);color:#fff;font-weight:700}
+  .info{font-size:.76rem;color:var(--brand-d);background:#eef4ff;border-radius:8px;padding:7px 10px;margin-top:8px}
+  .live{display:inline-block;font-size:.7rem;border-radius:999px;padding:2px 9px;font-weight:700;margin-left:6px;vertical-align:1px;white-space:nowrap}
+  .live.on{background:#e6f6ee;color:#1c7a4f}
+  .live.off{background:#fdeeee;color:#b5462f}
+  /* collapsible section */
+  .sec{border:1px solid var(--line);border-radius:12px;margin-bottom:12px;background:#fff;overflow:hidden}
+  .sec>.head{width:100%;text-align:left;border:none;background:#fff;padding:13px 14px;font-size:.92rem;
+    font-weight:700;color:var(--ink);cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+  .sec>.head .arr{color:var(--brand);font-size:.8rem;transition:transform .15s}
+  .sec.open>.head .arr{transform:rotate(90deg)}
+  .sec>.body{padding:0 14px 14px;display:none}
+  .sec.open>.body{display:block}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+  button.act{border:none;border-radius:8px;padding:9px 16px;font-size:.85rem;cursor:pointer;font-weight:700}
+  .ghost{background:#eef1f4;color:var(--ink)}
+  /* summary */
+  .sub3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  @media(max-width:520px){.sub3{grid-template-columns:1fr 1fr}}
+  .stat{background:#fff;border:1px solid #e9eef2;border-left:5px solid #cbd3db;border-radius:9px;padding:9px 10px}
+  .stat .k{font-size:.7rem;font-weight:700}
+  .stat .v{font-size:1rem;font-weight:800;margin-top:1px;color:var(--ink)}
+  /* グラフの凡例と色を合わせ、口座と元本を直感的に区別 */
+  .stat.s-nomura{border-left-color:var(--nomura);background:#f2f8fe}
+  .stat.s-nomura .k{color:#1666d6}
+  .stat.s-point{border-left-color:var(--point);background:#fff7e9}
+  .stat.s-point .k{color:#bc7a12}
+  .stat.s-cum{border-left-color:var(--cum);background:#f4f5f7}
+  .stat.s-cum .k{color:var(--cum)}
+  .note{font-size:.74rem;color:var(--sub);background:#fbfbfb;border:1px dashed var(--line);border-radius:10px;padding:11px 13px;margin-top:8px}
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{border-collapse:collapse;width:100%;font-size:.78rem;min-width:520px}
+  th,td{padding:6px 8px;text-align:right;border-bottom:1px solid #eef1f4;white-space:nowrap}
+  th{background:#f3f6f9;font-size:.72rem;color:var(--sub)}
+  td:first-child,th:first-child{text-align:center;font-weight:700}
+  tr.retire td{background:#fff8ec}
+  tr.milestone td{font-weight:700;background:#eef5ff}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.74rem;margin:2px 0 8px}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  canvas{width:100%;height:auto;display:block}
+  .tag{font-size:.66rem;background:#eef1f4;color:var(--sub);border-radius:5px;padding:1px 6px;margin-left:5px}
+  .expl h3{font-size:.9rem;margin:14px 0 4px;color:var(--brand-d)}
+  .expl ul{margin:5px 0;padding-left:20px}
+  .expl li{margin:2px 0}
+  .expl p{margin:6px 0}
+  .pull{background:#eef5ff;border-left:3px solid var(--brand);padding:9px 12px;border-radius:6px;margin:8px 0;font-weight:600}
+  footer{text-align:center;font-size:.7rem;color:#9aa5b1;padding:18px 16px 36px}
+</style>
+</head>
+<body>
+<header>
+  <h1>持株会シミュレーター</h1>
+  <div class="co">株式会社良品計画（証券コード 7453）</div>
+</header>
+
+<div class="wrap">
+
+  <!-- 基本設定 -->
+  <div class="card key">
+    <h2>基本設定 <span class="live on" id="liveBadge">現在値</span></h2>
+    <div class="grid basic">
+      <div>
+        <label class="field">毎月の拠出額（円）</label>
+        <input type="number" id="monthly" value="1000" min="1000" step="1000">
+        <div class="hint nowrap">給与から毎月積み立てる金額（1,000円以上・1,000円単位）</div>
+      </div>
+      <!-- 拠出年数・運用年数は常に左右2列 -->
+      <div class="pair">
+        <div>
+          <label class="field">拠出する年数（年）</label>
+          <input type="number" id="contribYears" value="10" min="0" max="60" step="1">
+          <div class="hint">あと何年、積立を続けるか</div>
+        </div>
+        <div>
+          <label class="field">運用する年数（年）</label>
+          <div class="lockwrap">
+            <input type="number" id="simYears" value="10" min="1" max="70" step="1" disabled>
+            <button type="button" id="simLock" class="lockbtn" aria-pressed="true" aria-label="運用年数を拠出年数に固定">🔒</button>
+          </div>
+          <div class="hint" id="simLockHint">🔒 拠出年数と同じ（タップで解除して任意入力）</div>
+        </div>
+      </div>
+      <div>
+        <label class="field">現在の株価（円）</label>
+        <input type="number" id="stockPrice" value="3496" min="1" step="1">
+        <div class="hint" id="priceHint">市場株価（前営業日終値）を初期値に設定</div>
+      </div>
+      <div>
+        <label class="field">年平均成長率</label>
+        <select id="growthSel">
+          <option value="0.03">3%</option>
+          <option value="0.05" selected>5%</option>
+          <option value="0.07">7%</option>
+          <option value="custom">カスタム入力</option>
+        </select>
+        <input type="number" id="growthCustom" value="5" min="-50" max="100" step="0.1" style="display:none;margin-top:6px">
+      </div>
+      <div>
+        <label class="field">ボーナス拠出</label>
+        <div class="toggle" id="bonusToggle">
+          <button type="button" data-v="1">あり</button>
+          <button type="button" data-v="0" class="on">なし</button>
+        </div>
+        <div class="info" id="bonusInfo" style="display:none">6月・12月に、毎月拠出額の2倍を賞与から自動で追加拠出します。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 保有状況（折りたたみ・初期非表示） -->
+  <div class="sec" id="secHold">
+    <button type="button" class="head" data-sec="secHold">
+      <span>いまの保有状況を入力する（任意）</span><span class="arr">▶</span>
+    </button>
+    <div class="body">
+      <div class="grid">
+        <div>
+          <label class="field">現在の野村口座の保有株数（株）</label>
+          <input type="number" id="nomuraInit" value="0" min="0" step="0.01">
+          <div class="hint">小数点以下2桁まで。これから始める方は 0 のままでOK</div>
+        </div>
+        <div>
+          <label class="field">現在の退職金ポイント残高（ポイント）</label>
+          <input type="number" id="pointsInit" value="0" min="0" step="0.001">
+          <div class="hint">これから始める方は 0 のままでOK</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 配当金の設定（折りたたみ・初期非表示） -->
+  <div class="sec" id="secDiv">
+    <button type="button" class="head" data-sec="secDiv">
+      <span>配当金の設定（任意・初期は反映ON）</span><span class="arr">▶</span>
+    </button>
+    <div class="body">
+      <div class="grid">
+        <div>
+          <label class="field">配当金を計算に反映</label>
+          <div class="toggle" id="divToggle">
+            <button type="button" data-v="1" class="on">あり</button>
+            <button type="button" data-v="0">なし</button>
+          </div>
+          <div class="hint">配当は再投資（株の買い増し）として概算反映します。</div>
+        </div>
+        <div>
+          <label class="field">1株あたり年間配当（円・会社予想）</label>
+          <input type="number" id="dividend" value="32" min="0" step="0.5">
+          <div class="hint" id="divHint">会社予想（IR）の年間配当を初期値に設定。任意で変更できます。</div>
+        </div>
+      </div>
+      <div class="info" id="divInfo">配当再投資は<strong>野村口座のみ</strong>に支払われ、退職金ポイント口座には拠出されません。<strong>退職後も継続して再投資する前提</strong>です。配当利回りは初期値ベースで一定とみなし、株価成長に連動して増えていく前提です。</div>
+    </div>
+  </div>
+
+  <!-- 退職金ポイント設定（折りたたみ・初期非表示） -->
+  <div class="sec" id="secPoint">
+    <button type="button" class="head" data-sec="secPoint">
+      <span>退職金ポイントの詳細設定</span><span class="arr">▶</span>
+    </button>
+    <div class="body">
+      <div class="grid">
+        <div>
+          <label class="field">現在の信託簿価（円）</label>
+          <input type="number" id="bookValue" value="1121" min="1" step="1">
+          <div class="hint">現在値は1,121円。今後を見据えて任意の値も入力できます。</div>
+        </div>
+        <div>
+          <label class="field">信託簿価の更新方式</label>
+          <select id="bookMode">
+            <option value="fixed">固定（ずっと現在簿価のまま）</option>
+            <option value="custom" selected>カスタム（一定周期で時価に更新）</option>
+          </select>
+        </div>
+        <div id="customBookWrap" style="grid-column:1/-1">
+          <label class="field">更新タイミング</label>
+          <div class="btns" style="align-items:center">
+            <span class="hint" style="margin:0">初回</span>
+            <input type="number" id="firstUpdate" value="2" min="0" max="40" step="1" style="width:64px">
+            <span class="hint" style="margin:0">年後、以後</span>
+            <input type="number" id="updateCycle" value="5" min="1" max="40" step="1" style="width:64px">
+            <span class="hint" style="margin:0">年ごとに時価更新</span>
+          </div>
+        </div>
+      </div>
+      <div class="hint" style="margin-top:8px">退職金ポイントの付与率は制度上50%固定です。</div>
+    </div>
+  </div>
+
+  <div class="btns" style="margin-bottom:12px">
+    <button type="button" class="act ghost" id="resetBtn">↺ 初期値にリセット</button>
+  </div>
+
+  <!-- サマリー詳細 -->
+  <div class="card key">
+    <h2>シミュレーション結果（内訳）</h2>
+    <div class="sub3">
+      <div class="stat s-nomura"><div class="k">野村口座</div><div class="v" id="nomuraVal">—</div></div>
+      <div class="stat s-point"><div class="k" id="pointKey">退職金ポイント</div><div class="v" id="pointVal">—</div></div>
+      <div class="stat s-cum"><div class="k">累計本人拠出</div><div class="v" id="cumVal">—</div></div>
+    </div>
+    <div class="note" id="summaryNote"></div>
+  </div>
+
+  <!-- グラフ -->
+  <div class="card">
+    <h2>評価額の推移</h2>
+    <div class="legend">
+      <span><i style="background:var(--nomura)"></i>野村口座</span>
+      <span><i style="background:var(--point)"></i>退職金ポイント／特定口座移管分</span>
+      <span><i style="background:var(--cum)"></i>累計本人拠出</span>
+    </div>
+    <canvas id="chart" width="840" height="300"></canvas>
+  </div>
+
+  <!-- 年次推移 -->
+  <div class="card">
+    <h2>年次推移表 <span class="tag" id="tableGrowthTag"></span></h2>
+    <div class="scroll"><table id="yearTable"></table></div>
+  </div>
+
+  <!-- 持株会の説明（ページ下部） -->
+  <div class="sec" id="secExpl">
+    <button type="button" class="head" data-sec="secExpl">
+      <span>持株会ってなに？（はじめての方へ）</span><span class="arr">▶</span>
+    </button>
+    <div class="body expl">
+      <div class="pull">持株会は、「会社の成長に、自分の将来資産も一緒に乗せていく仕組み」。ただし株なので、増える可能性も減る可能性もある。だから、無理のない金額で長く続けるのが基本です。</div>
+      <h3>かんたんに言うと</h3>
+      <p>持株会は、毎月の給与から決めた金額で自社株を買っていく制度です。毎月同じ金額で買うので、株価が高い時は少なく、安い時は多く買えます。長く続けるほど株数が積み上がり、会社が成長して株価が上がれば、将来の評価額も大きくなります。当社は通常の持株に加えて<strong>退職金ポイント</strong>もあるため、長く働く人ほどメリットが出やすい仕組みです。</p>
+      <h3>メリット</h3>
+      <ul>
+        <li>拠出の初月は、拠出額に応じて会社から拠出金の上乗せがある</li>
+        <li>給与天引きなので、毎月の手続きが不要</li>
+        <li>毎月買うため、買うタイミングを考えなくてよい</li>
+        <li>会社の成長を、自分の資産形成につなげられる</li>
+        <li>長く働くほど、退職金ポイントの効果が出やすい</li>
+        <li>若いうちから始めると、時間を味方にしやすい</li>
+      </ul>
+      <h3>注意点</h3>
+      <ul>
+        <li>株なので評価額は上下する／元本保証ではない</li>
+        <li>自社株に集中するため、リスクも偏る</li>
+        <li>生活費を削ってまで高額拠出するものではない</li>
+        <li>退職金ポイントの評価に使う信託簿価は変動するため、表示の評価額と実際の評価額が変わる可能性がある</li>
+        <li>退職後は口座の管理に手数料が発生する場合がある</li>
+        <li>売却時に税金（譲渡所得に対する課税）が発生する可能性がある</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>ご注意</strong><br>
+    この試算は、税金・手数料・制度変更・株式分割を考慮しない概算です。配当金は、在籍中は自動で野村口座に再投資され、退職後は任意で再投資できます（本シミュレーションは、退職後も配当金の再投資を行う前提で計算しています）。株価・配当の初期値は配布時点（2026年6月19日）の数値を用いた固定値で、自動更新は行いません（最新の株価・配当はIR情報等でご確認ください）。実際の受取額や課税関係は、会社制度・証券会社・税務上の扱いにより異なります。投資判断は本人の責任で行ってください。
+  </div>
+
+</div>
+<footer>持株会シミュレーター（社内向け概算ツール）／株式会社良品計画</footer>
+
+<!-- 下部固定の結果バー -->
+<div class="bottombar">
+  <div class="inner">
+    <div class="rb-cell main">
+      <span class="rb-lab" id="barLab">合計評価額</span>
+      <span class="rb-val" id="barTotal">—</span>
+    </div>
+    <div class="rb-cell gaincell">
+      <span class="rb-lab">評価益の目安</span>
+      <span class="rb-gain" id="barGain">—</span>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const DEFAULTS = {
+  stockPrice:3496, monthly:1000, contribYears:10, simYears:10,
+  growthSel:"0.05", growthCustom:5, bonus:0,
+  nomuraInit:0, pointsInit:0, bookValue:1121, bookMode:"custom",
+  firstUpdate:2, updateCycle:5,
+  divOn:1, dividend:32
+};
+/* 市場データの初期値。社内配布版は外部取得を一切行わず、下の埋め込み値を使用する。
+   株価・配当を更新する場合は EMBEDDED_QUOTE（asOf 含む）を書き換えて再配布する。 */
+const FALLBACK = { price:3496, dividend:32 };
+/* ▼▼▼ 社内配布用に埋め込んだ現在値（手動更新） ▼▼▼
+   2026-06-19 時点：株価 3,496円／年間配当 32円（IR予想 2026年8月期）。
+   次回更新時は price / annualDividendPerShare / dividendYield / asOf を書き換えるだけ。 */
+const EMBEDDED_QUOTE = {
+  price: 3496,
+  annualDividendPerShare: 32,
+  dividendYield: 0.0092,
+  asOf: "2026-06-19",
+  source: "社内配布版（埋め込み値・手動更新）"
+};
+/* ▲▲▲ ここまでが手動更新の対象 ▲▲▲ */
+/* 適用中の市場データ */
+let QUOTE = null;
+/* ユーザーが手入力で触れたか（触れた項目は自動値で上書きしない） */
+const touched = { stockPrice:false, dividend:false };
+
+const GRANT_RATE = 0.5;    // 退職金ポイント付与率（制度上固定）
+const BONUS_MONTHS = [6,12];
+
+/* 折りたたみセクション */
+document.querySelectorAll(".sec > .head").forEach(h=>{
+  h.addEventListener("click",()=> $(h.dataset.sec).classList.toggle("open"));
+});
+
+/* ボーナスあり/なし（既定: なし） */
+let bonusOn = false;
+const bonusToggle = $("bonusToggle");
+bonusToggle.addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  bonusOn = b.dataset.v==="1";
+  bonusToggle.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
+  $("bonusInfo").style.display = bonusOn ? "" : "none";
+  recalc();
+});
+
+/* 配当あり/なし */
+let divOn = true;
+const divToggle = $("divToggle");
+divToggle.addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  divOn = b.dataset.v==="1";
+  divToggle.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
+  recalc();
+});
+
+/* 成長率セレクト */
+$("growthSel").addEventListener("change",()=>{
+  $("growthCustom").style.display = $("growthSel").value==="custom" ? "" : "none";
+  recalc();
+});
+/* 簿価更新方式 */
+$("bookMode").addEventListener("change",()=>{
+  $("customBookWrap").style.display = $("bookMode").value==="custom" ? "" : "none";
+  recalc();
+});
+/* 手入力フラグ（自動値の上書き防止） */
+$("stockPrice").addEventListener("input",()=>{touched.stockPrice=true;});
+$("dividend").addEventListener("input",()=>{touched.dividend=true;});
+/* 運用年数のロック（🔒=拠出年数と同期 / 🔓=任意入力） */
+let simLocked=true;
+const simLock=$("simLock");
+function applyLock(){
+  simLock.textContent = simLocked ? "🔒" : "🔓";
+  simLock.setAttribute("aria-pressed", simLocked ? "true" : "false");
+  $("simLockHint").textContent = simLocked
+    ? "🔒 拠出年数と同じ（タップで解除して任意入力）"
+    : "🔓 任意の運用年数を入力できます（再ロックで拠出年数に戻る）";
+  $("simYears").disabled = simLocked;
+}
+simLock.addEventListener("click",()=>{ simLocked=!simLocked; applyLock(); recalc(); });
+applyLock();
+/* 全入力で即時再計算 */
+document.querySelectorAll("input,select").forEach(el=> el.addEventListener("input",recalc));
+
+/* ---- パラメータ取得 ---- */
+function num(id,def){const v=parseFloat($(id).value);return isFinite(v)?v:def;}
+function readParams(){
+  const growth = $("growthSel").value==="custom"
+    ? (parseFloat($("growthCustom").value)||0)/100
+    : parseFloat($("growthSel").value);
+  return {
+    P0:num("stockPrice",FALLBACK.price),
+    monthly:num("monthly",0),
+    contribMonths:Math.round(num("contribYears",0))*12,
+    totalMonths:(simLocked?Math.round(num("contribYears",0)):Math.round(num("simYears",1)))*12,
+    growth, bonusOn,
+    nomuraInitShares:num("nomuraInit",0),   // 株数（小数2桁まで）
+    pointsInit:num("pointsInit",0),
+    bookValue:Math.max(1,num("bookValue",1121)),
+    bookMode:$("bookMode").value,
+    firstUpdate:Math.round(num("firstUpdate",0)),
+    updateCycle:Math.max(1,Math.round(num("updateCycle",1))),
+    divOn,
+    dividend:Math.max(0,num("dividend",FALLBACK.dividend))
+  };
+}
+
+/* ---- 月次シミュレーション ---- */
+function simulate(p, annualOverride){
+  const annual=(annualOverride!=null)?annualOverride:p.growth;
+  const g=Math.pow(1+annual,1/12)-1;
+  // 配当利回り＝初期1株配当 ÷ 初期株価（以後一定とみなし株価成長に連動）
+  const divYield = (p.divOn && p.P0>0) ? (p.dividend/p.P0) : 0;
+  const mDiv = divYield/12;                 // 月次の配当（野村口座の保有株数に対して）
+  let shares=p.nomuraInitShares;            // 野村口座の保有株数
+  let points=p.pointsInit;                  // 退職金ポイント（配当は付かない）
+  let book=p.bookValue, cum=0, price=p.P0, divCum=0;
+  const rows=[{year:0,price:p.P0,book,nomura:shares*p.P0,point:points*p.P0,
+    total:(shares+points)*p.P0,cum,divCum:0,retired:false}];
+  const fm=p.firstUpdate*12;
+  for(let m=1;m<=p.totalMonths;m++){
+    price=p.P0*Math.pow(1+g,m);
+    if(p.bookMode==="custom" && (m===fm || (m>fm && (m-fm)%(p.updateCycle*12)===0))) book=price;
+    if(m<=p.contribMonths){
+      let c=p.monthly;
+      const moy=((m-1)%12)+1;
+      if(p.bonusOn && BONUS_MONTHS.includes(moy)) c+=p.monthly*2; // ボーナス＝毎月の2倍
+      if(price>0) shares+=c/price;
+      cum+=c;
+      if(book>0) points+=(c*GRANT_RATE)/book; // 退職金ポイントは拠出分のみ（配当は付かない）
+    }
+    // 配当の再投資：野村口座の保有株のみ。退職後も継続して株を買い増す
+    // （ポイント口座には拠出しない）
+    if(mDiv>0 && price>0){
+      const div=shares*price*mDiv;
+      divCum+=div;
+      shares+=div/price;
+    }
+    if(m%12===0) rows.push({year:m/12,price,book,nomura:shares*price,point:points*price,
+      total:(shares+points)*price,cum,divCum,retired:m>p.contribMonths});
+  }
+  return {rows,last:rows[rows.length-1],contribYears:p.contribMonths/12};
+}
+
+/* ---- 表示フォーマット ---- */
+function fmtYen(v){
+  if(!isFinite(v)) return "—";
+  const a=Math.abs(v),sign=v<0?"-":"";
+  const oku=Math.floor(a/1e8), man=a/1e4-oku*1e4;
+  if(oku>0) return `${sign}${oku}億${Math.round(man).toLocaleString()}万円`;
+  return `${sign}${Math.round(a/1e4).toLocaleString()}万円`;
+}
+function fmtShort(v){
+  if(!isFinite(v)) return "—";
+  if(Math.abs(v)>=1e8) return (v/1e8).toFixed(2)+"億円";
+  return Math.round(v/1e4).toLocaleString()+"万円";
+}
+function fmtNum(v){return isFinite(v)?Math.round(v).toLocaleString():"—";}
+function fmtPct(r){return (Math.round(r*1000)/10)+"%";}
+
+let lastResult=null;
+
+function recalc(){
+  // 運用年数：ロック中は拠出年数に同期（編集不可）
+  if(simLocked){ $("simYears").value=$("contribYears").value; }
+  $("simYears").disabled=simLocked;
+  const p=readParams();
+  const res=simulate(p); lastResult=res;
+  const last=res.last;
+  const retiredEver=p.contribMonths<p.totalMonths;
+  const pointLabel=retiredEver?"特定口座移管分":"退職金ポイント";
+  const invested=last.cum+p.nomuraInitShares*p.P0;   // 既存株は現在株価で取得したとみなす
+  const gain=last.total-invested;
+
+  // 固定の結果バー
+  $("barLab").textContent=`合計評価額（${p.totalMonths/12}年・成長率${fmtPct(p.growth)}）`;
+  $("barTotal").textContent=fmtYen(last.total);
+  $("barGain").textContent=(gain>=0?"+":"")+fmtYen(gain);
+
+  // 内訳
+  $("nomuraVal").textContent=fmtYen(last.nomura);
+  $("pointKey").textContent=pointLabel;
+  $("pointVal").textContent=fmtYen(last.point);
+  $("cumVal").textContent=fmtYen(last.cum);
+
+  let note=`評価益の目安 ＝ 合計評価額 −（既存保有株の現在評価額 ＋ 累計本人拠出額）。`;
+  if(p.divOn){
+    const yld=p.P0>0?p.dividend/p.P0:0;
+    note+=`<br>配当（1株あたり年間 ${fmtNum(p.dividend)}円・利回り約${fmtPct(yld)}）を野村口座のみに再投資（退職後も継続）。累計の配当再投資額 ≈ ${fmtShort(last.divCum)}。`;
+  }
+  if(retiredEver){
+    note+=`<br>拠出は${res.contribYears}年で終了し、その後は退職金ポイントを退職時の時価で評価した<strong>特定口座移管分</strong>として表示しています。`;
+  }
+  $("summaryNote").innerHTML=note;
+
+  renderYear(res,pointLabel);
+  drawChart(res);
+  $("tableGrowthTag").textContent=`成長率 ${fmtPct(p.growth)}`;
+}
+
+function renderYear(res,pointLabel){
+  let h=`<thead><tr><th>年数</th><th>合計評価額</th><th>想定株価</th><th>信託簿価</th>
+    <th>野村口座</th><th>${pointLabel}</th><th>累計拠出</th></tr></thead><tbody>`;
+  res.rows.forEach(r=>{
+    const cls=r.retired?"retire":(r.year===res.contribYears&&r.year>0?"milestone":"");
+    h+=`<tr class="${cls}"><td>${r.year}年${r.retired?'<span class="tag">退職後</span>':''}</td>
+      <td><strong>${fmtShort(r.total)}</strong></td>
+      <td>${fmtNum(r.price)}円</td><td>${fmtNum(r.book)}円</td>
+      <td>${fmtShort(r.nomura)}</td><td>${fmtShort(r.point)}</td>
+      <td>${fmtShort(r.cum)}</td></tr>`;
+  });
+  $("yearTable").innerHTML=h+"</tbody>";
+}
+
+/* ---- グラフ ---- */
+function drawChart(res){
+  const cv=$("chart"),ctx=cv.getContext("2d");
+  const W=cv.width,H=cv.height,pL=54,pR=12,pT=12,pB=26;
+  ctx.clearRect(0,0,W,H);
+  const rows=res.rows, maxV=Math.max(...rows.map(r=>r.total),1), n=rows.length-1||1;
+  const x=i=>pL+(W-pL-pR)*(i/n), y=v=>H-pB-(H-pT-pB)*(v/maxV);
+  ctx.font="11px sans-serif";ctx.textBaseline="middle";
+  for(let i=0;i<=4;i++){const v=maxV*i/4,yy=y(v);
+    ctx.strokeStyle="#eef1f4";ctx.beginPath();ctx.moveTo(pL,yy);ctx.lineTo(W-pR,yy);ctx.stroke();
+    ctx.fillStyle="#8a94a0";ctx.textAlign="right";
+    ctx.fillText(v>=1e8?(v/1e8).toFixed(1)+"億":Math.round(v/1e4).toLocaleString()+"万",pL-6,yy);}
+  ctx.textAlign="center";ctx.textBaseline="top";
+  const xs=Math.ceil(n/8);
+  rows.forEach((r,i)=>{if(i%xs===0||i===n) ctx.fillText(r.year+"年",x(i),H-pB+5);});
+  function area(top,bot,c){ctx.beginPath();
+    rows.forEach((r,i)=>{const px=x(i),py=y(bot(r));i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);});
+    for(let i=rows.length-1;i>=0;i--)ctx.lineTo(x(i),y(top(rows[i])));
+    ctx.closePath();ctx.fillStyle=c;ctx.fill();}
+  area(r=>r.nomura,()=>0,"rgba(47,126,216,.5)");
+  area(r=>r.total,r=>r.nomura,"rgba(242,169,59,.6)");
+  ctx.beginPath();ctx.lineWidth=2;ctx.strokeStyle="#1751b8";
+  rows.forEach((r,i)=>{const px=x(i),py=y(r.total);i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);});ctx.stroke();
+  // 累計本人拠出：太い実線（白フチ付きで塗りの上でもくっきり）
+  ctx.save();
+  ctx.lineJoin="round";ctx.lineCap="round";
+  ctx.lineWidth=6;ctx.strokeStyle="rgba(255,255,255,.9)";
+  ctx.beginPath();
+  rows.forEach((r,i)=>{const px=x(i),py=y(r.cum);i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);});ctx.stroke();
+  ctx.lineWidth=3.5;ctx.strokeStyle="#374151";
+  ctx.beginPath();
+  rows.forEach((r,i)=>{const px=x(i),py=y(r.cum);i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);});ctx.stroke();
+  ctx.restore();
+}
+
+/* ---- リセット ---- */
+$("resetBtn").addEventListener("click",()=>{
+  const price=(QUOTE&&isFinite(QUOTE.price))?QUOTE.price:DEFAULTS.stockPrice;
+  const div=(QUOTE&&isFinite(QUOTE.annualDividendPerShare))?QUOTE.annualDividendPerShare:DEFAULTS.dividend;
+  $("stockPrice").value=price; touched.stockPrice=false;
+  $("dividend").value=div;     touched.dividend=false;
+  $("monthly").value=DEFAULTS.monthly;
+  $("contribYears").value=DEFAULTS.contribYears;
+  $("simYears").value=DEFAULTS.simYears;
+  simLocked=true; applyLock();
+  $("growthSel").value=DEFAULTS.growthSel;
+  $("growthCustom").value=DEFAULTS.growthCustom;$("growthCustom").style.display="none";
+  $("nomuraInit").value=DEFAULTS.nomuraInit;
+  $("pointsInit").value=DEFAULTS.pointsInit;
+  $("bookValue").value=DEFAULTS.bookValue;
+  $("bookMode").value=DEFAULTS.bookMode;$("customBookWrap").style.display="";
+  $("firstUpdate").value=DEFAULTS.firstUpdate;
+  $("updateCycle").value=DEFAULTS.updateCycle;
+  bonusOn=false;
+  bonusToggle.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.v==="0"));
+  $("bonusInfo").style.display="none";
+  divOn=true;
+  divToggle.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.v==="1"));
+  recalc();
+});
+
+/* ---- 市場データの適用（社内配布版：外部アクセスなし） ----
+   この配布版は外部サイトへの通信を一切行わず、上の EMBEDDED_QUOTE の
+   埋め込み値（手動更新）をそのまま現在値として表示する。 */
+function applyQuote(q){
+  QUOTE=q;
+  const badge=$("liveBadge");
+  if(!q){
+    badge.className="live off"; badge.textContent="初期値を使用"; badge.title="";
+    return;
+  }
+  // 手入力で触れていない項目だけ埋め込み値で設定
+  if(!touched.stockPrice && isFinite(q.price)) $("stockPrice").value=Math.round(q.price);
+  if(!touched.dividend && isFinite(q.annualDividendPerShare)) $("dividend").value=q.annualDividendPerShare;
+  badge.className="live on";
+  badge.textContent=`現在値（${q.asOf||"最新"}時点）`;
+  badge.title=`${q.source||""}${q.asOf?` ／ ${q.asOf}時点`:""}`;
+  $("priceHint").textContent=`現在の株価${q.asOf?`（${q.asOf}時点）`:""}を初期値に設定（手入力で上書き可）`;
+  if(isFinite(q.dividendYield)){
+    $("divHint").textContent=`現在の年間配当（IR予想）を初期値に設定（利回り約${(q.dividendYield*100).toFixed(2)}%）。任意で変更できます。`;
+  }
+  recalc();
+}
+
+recalc();
+applyQuote(EMBEDDED_QUOTE);
+window.addEventListener("resize",()=>{if(lastResult)drawChart(lastResult);});
+</script>
+</body>
+</html>
