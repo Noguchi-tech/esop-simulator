@@ -358,6 +358,25 @@ const touched = { stockPrice:false, dividend:false };
 const GRANT_RATE = 0.5;    // 退職金ポイント付与率（制度上固定）
 const BONUS_MONTHS = [6,12];
 
+/* ===== iOS キーボード対策 =====
+   キーボードが出るとビジュアルビューポートが縮む／パンするため、
+   アプリ(body)の高さと位置をその可視領域に合わせる。これでヘッダは常に画面最上部に残る。
+   scroll/resize は requestAnimationFrame で間引き、ちらつきを防ぐ。 */
+(function(){
+  const vv = window.visualViewport;
+  if(!vv) return;
+  let pending=false;
+  function fit(){
+    document.body.style.height = vv.height + "px";
+    document.body.style.transform = vv.offsetTop ? `translateY(${vv.offsetTop}px)` : "";
+  }
+  function onVV(){ if(pending) return; pending=true; requestAnimationFrame(()=>{pending=false; fit();}); }
+  vv.addEventListener("resize", onVV);
+  vv.addEventListener("scroll", onVV);
+  window.addEventListener("orientationchange", ()=> setTimeout(fit, 300));
+  fit();
+})();
+
 /* 折りたたみセクション */
 document.querySelectorAll(".sec > .head").forEach(h=>{
   h.addEventListener("click",()=> $(h.dataset.sec).classList.toggle("open"));
