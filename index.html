@@ -11,27 +11,21 @@
     --nomura:#2f7ed8; --point:#f2a93b; --good:#2e9e6b; --div:#8e6fd8; --cum:#374151;
   }
   *{box-sizing:border-box}
-  html,body{height:100%}
-  /* アプリ全体をビューポートに固定（position:fixed）。
-     これにより iOS でも「ページ自体」はスクロールできず、入力にフォーカスしても
-     ヘッダは動かない。スクロールは内側の #scroller だけが担当する。 */
   body{margin:0;font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
     background:var(--bg);color:var(--ink);line-height:1.55;font-size:15px;-webkit-text-size-adjust:100%;
-    position:fixed;top:0;left:0;right:0;bottom:0;
-    display:flex;flex-direction:column;overflow:hidden}
+    /* 下部固定バーに隠れないよう余白を確保 */
+    padding-bottom:calc(78px + env(safe-area-inset-bottom))}
 
-  /* ===== 固定ヘッダ＋結果バー（アプリシェル構成） =====
-     ヘッダは固定行、本文 #scroller だけがスクロールする。
-     position:fixed/sticky を使わないため、iOS でキーボード表示中・スクロール中もヘッダが動かない。 */
-  header{flex:0 0 auto;z-index:30;background:#fff;border-bottom:2px solid var(--brand);
-    padding:8px 14px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
-  #scroller{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
-  .hbar{display:flex;align-items:center;justify-content:space-between;gap:8px;max-width:880px;margin:0 auto}
-  .hbar h1{margin:0;font-size:1.02rem;letter-spacing:.02em;white-space:nowrap}
-  .rb-toggle{border:1px solid var(--line);background:#f3f6f9;color:var(--brand-d);border-radius:7px;
-    padding:5px 10px;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap}
-  .resultbar{max-width:880px;margin:6px auto 0;display:flex;gap:8px;align-items:stretch}
-  .resultbar.hidden{display:none}
+  /* 通常スクロールのヘッダ（上部・スクロールで流れる） */
+  header{background:#fff;border-bottom:2px solid var(--brand);padding:12px 16px;text-align:center}
+  header h1{margin:0;font-size:1.12rem;letter-spacing:.02em}
+  header .co{font-size:.78rem;color:var(--sub);margin-top:3px}
+
+  /* ===== 下部固定の結果バー ===== */
+  .bottombar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:2px solid var(--brand);
+    box-shadow:0 -2px 10px rgba(0,0,0,.08);padding:8px 14px;
+    padding-bottom:calc(8px + env(safe-area-inset-bottom))}
+  .bottombar .inner{max-width:880px;margin:0 auto;display:flex;gap:8px;align-items:stretch}
   .rb-cell{background:linear-gradient(135deg,#eef5ff,#e6efff);border:1px solid #cfe0ff;border-radius:9px;
     padding:5px 10px;min-width:0}
   .rb-cell.main{flex:1}
@@ -116,24 +110,11 @@
 </head>
 <body>
 <header>
-  <div class="hbar">
-    <h1>持株会シミュレーター</h1>
-  </div>
-  <div class="resultbar" id="resultBar">
-    <div class="rb-cell main">
-      <span class="rb-lab" id="barLab">合計評価額</span>
-      <span class="rb-val" id="barTotal">—</span>
-    </div>
-    <div class="rb-cell gaincell">
-      <span class="rb-lab">評価益の目安</span>
-      <span class="rb-gain" id="barGain">—</span>
-    </div>
-  </div>
+  <h1>持株会シミュレーター</h1>
+  <div class="co">株式会社良品計画（証券コード 7453）</div>
 </header>
 
-<main id="scroller">
 <div class="wrap">
-  <div class="colead">株式会社良品計画（証券コード 7453）</div>
 
   <!-- 基本設定 -->
   <div class="card key">
@@ -335,7 +316,20 @@
 
 </div>
 <footer>持株会シミュレーター（社内向け概算ツール）／株式会社良品計画</footer>
-</main>
+
+<!-- 下部固定の結果バー -->
+<div class="bottombar">
+  <div class="inner">
+    <div class="rb-cell main">
+      <span class="rb-lab" id="barLab">合計評価額</span>
+      <span class="rb-val" id="barTotal">—</span>
+    </div>
+    <div class="rb-cell gaincell">
+      <span class="rb-lab">評価益の目安</span>
+      <span class="rb-gain" id="barGain">—</span>
+    </div>
+  </div>
+</div>
 
 <script>
 "use strict";
@@ -357,25 +351,6 @@ const touched = { stockPrice:false, dividend:false };
 
 const GRANT_RATE = 0.5;    // 退職金ポイント付与率（制度上固定）
 const BONUS_MONTHS = [6,12];
-
-/* ===== iOS キーボード対策 =====
-   キーボードが出るとビジュアルビューポートが縮む／パンするため、
-   アプリ(body)の高さと位置をその可視領域に合わせる。これでヘッダは常に画面最上部に残る。
-   scroll/resize は requestAnimationFrame で間引き、ちらつきを防ぐ。 */
-(function(){
-  const vv = window.visualViewport;
-  if(!vv) return;
-  let pending=false;
-  function fit(){
-    document.body.style.height = vv.height + "px";
-    document.body.style.transform = vv.offsetTop ? `translateY(${vv.offsetTop}px)` : "";
-  }
-  function onVV(){ if(pending) return; pending=true; requestAnimationFrame(()=>{pending=false; fit();}); }
-  vv.addEventListener("resize", onVV);
-  vv.addEventListener("scroll", onVV);
-  window.addEventListener("orientationchange", ()=> setTimeout(fit, 300));
-  fit();
-})();
 
 /* 折りたたみセクション */
 document.querySelectorAll(".sec > .head").forEach(h=>{
