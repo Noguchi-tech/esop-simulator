@@ -143,11 +143,6 @@
         </div>
       </div>
       <div>
-        <label class="field">現在の株価（円）</label>
-        <input type="number" id="stockPrice" value="3496" min="1" step="1">
-        <div class="hint" id="priceHint">市場株価（前営業日終値）を初期値に設定</div>
-      </div>
-      <div>
         <label class="field">年平均成長率</label>
         <select id="growthSel">
           <option value="0.03">3%</option>
@@ -192,10 +187,15 @@
   <!-- 配当金の設定（折りたたみ・初期非表示） -->
   <div class="sec" id="secDiv">
     <button type="button" class="head" data-sec="secDiv">
-      <span>配当金の設定（任意・初期は反映ON）</span><span class="arr">▶</span>
+      <span>株価・配当金の設定（任意・通常は変更不要）</span><span class="arr">▶</span>
     </button>
     <div class="body">
       <div class="grid">
+        <div>
+          <label class="field">現在の株価（円）</label>
+          <input type="number" id="stockPrice" value="3496" min="1" step="1">
+          <div class="hint" id="priceHint">市場株価（前営業日終値）を初期値に設定。通常は変更不要です。</div>
+        </div>
         <div>
           <label class="field">配当金を計算に反映</label>
           <div class="toggle" id="divToggle">
