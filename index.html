@@ -21,7 +21,7 @@
      position:fixed/sticky を使わないため、iOS でキーボード表示中・スクロール中もヘッダが動かない。 */
   header{flex:0 0 auto;z-index:30;background:#fff;border-bottom:2px solid var(--brand);
     padding:8px 14px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
-  #scroller{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  #scroller{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
   .hbar{display:flex;align-items:center;justify-content:space-between;gap:8px;max-width:880px;margin:0 auto}
   .hbar h1{margin:0;font-size:1.02rem;letter-spacing:.02em;white-space:nowrap}
   .rb-toggle{border:1px solid var(--line);background:#f3f6f9;color:var(--brand-d);border-radius:7px;
@@ -49,8 +49,12 @@
   label.field{display:block;font-size:.8rem;color:var(--sub);margin-bottom:3px;font-weight:600}
   .hint{font-size:.72rem;color:#8a94a0;font-weight:400;margin-top:3px}
   .hint.nowrap{white-space:nowrap;font-size:.68rem}
-  .chk{display:flex;align-items:center;gap:6px;font-size:.74rem;color:var(--sub);font-weight:600;margin:0 0 5px;cursor:pointer}
-  .chk input{width:auto;margin:0}
+  .lockwrap{position:relative}
+  .lockwrap input{padding-right:46px}
+  .lockbtn{position:absolute;top:50%;right:6px;transform:translateY(-50%);width:34px;height:34px;padding:0;
+    border:1px solid var(--line);background:#fff;border-radius:8px;font-size:1.05rem;line-height:1;cursor:pointer;
+    display:flex;align-items:center;justify-content:center}
+  .lockbtn[aria-pressed="false"]{background:#eef4ff;border-color:#9dbff5}
   input[type=number],select{width:100%;padding:9px 10px;border:1px solid var(--line);
     border-radius:8px;font-size:1rem;background:#fff;color:var(--ink)}
   input:disabled{background:#f1f3f5;color:#5a6571}
@@ -151,9 +155,11 @@
         </div>
         <div>
           <label class="field">運用する年数（年）</label>
-          <label class="chk"><input type="checkbox" id="simSame" checked>拠出年数と同じにする</label>
-          <input type="number" id="simYears" value="10" min="1" max="70" step="1" disabled>
-          <div class="hint">退職後も運用するならチェックを外して入力</div>
+          <div class="lockwrap">
+            <input type="number" id="simYears" value="10" min="1" max="70" step="1" disabled>
+            <button type="button" id="simLock" class="lockbtn" aria-pressed="true" aria-label="運用年数を拠出年数に固定">🔒</button>
+          </div>
+          <div class="hint" id="simLockHint">🔒 拠出年数と同じ（タップで解除して任意入力）</div>
         </div>
       </div>
       <div>
@@ -313,6 +319,7 @@
         <li>生活費を削ってまで高額拠出するものではない</li>
         <li>退職金ポイントの評価に使う信託簿価は変動するため、表示の評価額と実際の評価額が変わる可能性がある</li>
         <li>退職後は口座の管理に手数料が発生する場合がある</li>
+        <li>売却時に税金（譲渡所得に対する課税）が発生する可能性がある</li>
       </ul>
     </div>
   </div>
@@ -393,8 +400,19 @@ $("bookMode").addEventListener("change",()=>{
 /* 手入力フラグ（自動値の上書き防止） */
 $("stockPrice").addEventListener("input",()=>{touched.stockPrice=true;});
 $("dividend").addEventListener("input",()=>{touched.dividend=true;});
-/* 運用年数を拠出年数と同じにする（チェック時） */
-$("simSame").addEventListener("change",recalc);
+/* 運用年数のロック（🔒=拠出年数と同期 / 🔓=任意入力） */
+let simLocked=true;
+const simLock=$("simLock");
+function applyLock(){
+  simLock.textContent = simLocked ? "🔒" : "🔓";
+  simLock.setAttribute("aria-pressed", simLocked ? "true" : "false");
+  $("simLockHint").textContent = simLocked
+    ? "🔒 拠出年数と同じ（タップで解除して任意入力）"
+    : "🔓 任意の運用年数を入力できます（再ロックで拠出年数に戻る）";
+  $("simYears").disabled = simLocked;
+}
+simLock.addEventListener("click",()=>{ simLocked=!simLocked; applyLock(); recalc(); });
+applyLock();
 /* 全入力で即時再計算 */
 document.querySelectorAll("input,select").forEach(el=> el.addEventListener("input",recalc));
 
@@ -408,7 +426,7 @@ function readParams(){
     P0:num("stockPrice",FALLBACK.price),
     monthly:num("monthly",0),
     contribMonths:Math.round(num("contribYears",0))*12,
-    totalMonths:($("simSame").checked?Math.round(num("contribYears",0)):Math.round(num("simYears",1)))*12,
+    totalMonths:(simLocked?Math.round(num("contribYears",0)):Math.round(num("simYears",1)))*12,
     growth, bonusOn,
     nomuraInitShares:num("nomuraInit",0),   // 株数（小数2桁まで）
     pointsInit:num("pointsInit",0),
@@ -477,9 +495,9 @@ function fmtPct(r){return (Math.round(r*1000)/10)+"%";}
 let lastResult=null;
 
 function recalc(){
-  // 運用年数：チェック時は拠出年数に同期し編集不可にする
-  if($("simSame").checked){ $("simYears").value=$("contribYears").value; $("simYears").disabled=true; }
-  else { $("simYears").disabled=false; }
+  // 運用年数：ロック中は拠出年数に同期（編集不可）
+  if(simLocked){ $("simYears").value=$("contribYears").value; }
+  $("simYears").disabled=simLocked;
   const p=readParams();
   const res=simulate(p); lastResult=res;
   const last=res.last;
@@ -572,7 +590,7 @@ $("resetBtn").addEventListener("click",()=>{
   $("monthly").value=DEFAULTS.monthly;
   $("contribYears").value=DEFAULTS.contribYears;
   $("simYears").value=DEFAULTS.simYears;
-  $("simSame").checked=true;
+  simLocked=true; applyLock();
   $("growthSel").value=DEFAULTS.growthSel;
   $("growthCustom").value=DEFAULTS.growthCustom;$("growthCustom").style.display="none";
   $("nomuraInit").value=DEFAULTS.nomuraInit;
