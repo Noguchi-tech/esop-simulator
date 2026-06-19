@@ -11,13 +11,17 @@
     --nomura:#2f7ed8; --point:#f2a93b; --good:#2e9e6b; --div:#8e6fd8; --cum:#374151;
   }
   *{box-sizing:border-box}
+  html,body{height:100%}
   body{margin:0;font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
-    background:var(--bg);color:var(--ink);line-height:1.55;font-size:15px;-webkit-text-size-adjust:100%}
+    background:var(--bg);color:var(--ink);line-height:1.55;font-size:15px;-webkit-text-size-adjust:100%;
+    display:flex;flex-direction:column;overflow:hidden}
 
-  /* ===== 固定ヘッダ＋結果バー ===== */
-  /* スマホでも常に画面最上部に固定。JSでの位置補正はせず、ちらつき（上下動）を防止 */
-  header{position:fixed;top:0;left:0;right:0;z-index:30;background:#fff;border-bottom:2px solid var(--brand);
+  /* ===== 固定ヘッダ＋結果バー（アプリシェル構成） =====
+     ヘッダは固定行、本文 #scroller だけがスクロールする。
+     position:fixed/sticky を使わないため、iOS でキーボード表示中・スクロール中もヘッダが動かない。 */
+  header{flex:0 0 auto;z-index:30;background:#fff;border-bottom:2px solid var(--brand);
     padding:8px 14px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+  #scroller{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
   .hbar{display:flex;align-items:center;justify-content:space-between;gap:8px;max-width:880px;margin:0 auto}
   .hbar h1{margin:0;font-size:1.02rem;letter-spacing:.02em;white-space:nowrap}
   .rb-toggle{border:1px solid var(--line);background:#f3f6f9;color:var(--brand-d);border-radius:7px;
@@ -45,6 +49,8 @@
   label.field{display:block;font-size:.8rem;color:var(--sub);margin-bottom:3px;font-weight:600}
   .hint{font-size:.72rem;color:#8a94a0;font-weight:400;margin-top:3px}
   .hint.nowrap{white-space:nowrap;font-size:.68rem}
+  .chk{display:flex;align-items:center;gap:6px;font-size:.74rem;color:var(--sub);font-weight:600;margin:0 0 5px;cursor:pointer}
+  .chk input{width:auto;margin:0}
   input[type=number],select{width:100%;padding:9px 10px;border:1px solid var(--line);
     border-radius:8px;font-size:1rem;background:#fff;color:var(--ink)}
   input:disabled{background:#f1f3f5;color:#5a6571}
@@ -118,6 +124,7 @@
   </div>
 </header>
 
+<main id="scroller">
 <div class="wrap">
   <div class="colead">株式会社良品計画（証券コード 7453）</div>
 
@@ -144,8 +151,9 @@
         </div>
         <div>
           <label class="field">運用する年数（年）</label>
-          <input type="number" id="simYears" value="10" min="1" max="70" step="1">
-          <div class="hint">退職後も含む合計年数</div>
+          <label class="chk"><input type="checkbox" id="simSame" checked>拠出年数と同じにする</label>
+          <input type="number" id="simYears" value="10" min="1" max="70" step="1" disabled>
+          <div class="hint">退職後も運用するならチェックを外して入力</div>
         </div>
       </div>
       <div>
@@ -161,10 +169,10 @@
       <div>
         <label class="field">ボーナス拠出</label>
         <div class="toggle" id="bonusToggle">
-          <button type="button" data-v="1" class="on">あり</button>
-          <button type="button" data-v="0">なし</button>
+          <button type="button" data-v="1">あり</button>
+          <button type="button" data-v="0" class="on">なし</button>
         </div>
-        <div class="info" id="bonusInfo">6月・12月に、毎月拠出額の2倍を賞与から自動で追加拠出します。</div>
+        <div class="info" id="bonusInfo" style="display:none">6月・12月に、毎月拠出額の2倍を賞与から自動で追加拠出します。</div>
       </div>
     </div>
   </div>
@@ -316,13 +324,14 @@
 
 </div>
 <footer>持株会シミュレーター（社内向け概算ツール）／株式会社良品計画</footer>
+</main>
 
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
 const DEFAULTS = {
   stockPrice:3496, monthly:1000, contribYears:10, simYears:10,
-  growthSel:"0.05", growthCustom:5, bonus:1,
+  growthSel:"0.05", growthCustom:5, bonus:0,
   nomuraInit:0, pointsInit:0, bookValue:1121, bookMode:"custom",
   firstUpdate:2, updateCycle:5,
   divOn:1, dividend:30
@@ -338,23 +347,11 @@ const touched = { stockPrice:false, dividend:false };
 const GRANT_RATE = 0.5;    // 退職金ポイント付与率（制度上固定）
 const BONUS_MONTHS = [6,12];
 
-/* ===== 固定ヘッダの制御 =====
-   position:fixed のヘッダ分だけ本文に余白を確保する。
-   （iOS でキーボード表示中にヘッダが上下に動く問題を避けるため、JSでの位置補正は一切行わない） */
-const headerEl=document.querySelector("header");
-function syncHeaderH(){
-  document.body.style.paddingTop = headerEl.offsetHeight + "px";
-}
-syncHeaderH();
-window.addEventListener("load",syncHeaderH);
-window.addEventListener("orientationchange",()=>setTimeout(syncHeaderH,250));
-
-/* 結果バーの表示/非表示 */
+/* 結果バーの表示/非表示（アプリシェルなので余白調整は不要） */
 const barToggle=$("barToggle");
 barToggle.addEventListener("click",()=>{
   const hidden=$("resultBar").classList.toggle("hidden");
   barToggle.textContent=hidden?"結果を表示":"結果を隠す";
-  syncHeaderH();
 });
 
 /* 折りたたみセクション */
@@ -362,8 +359,8 @@ document.querySelectorAll(".sec > .head").forEach(h=>{
   h.addEventListener("click",()=> $(h.dataset.sec).classList.toggle("open"));
 });
 
-/* ボーナスあり/なし */
-let bonusOn = true;
+/* ボーナスあり/なし（既定: なし） */
+let bonusOn = false;
 const bonusToggle = $("bonusToggle");
 bonusToggle.addEventListener("click",e=>{
   const b=e.target.closest("button"); if(!b) return;
@@ -396,6 +393,8 @@ $("bookMode").addEventListener("change",()=>{
 /* 手入力フラグ（自動値の上書き防止） */
 $("stockPrice").addEventListener("input",()=>{touched.stockPrice=true;});
 $("dividend").addEventListener("input",()=>{touched.dividend=true;});
+/* 運用年数を拠出年数と同じにする（チェック時） */
+$("simSame").addEventListener("change",recalc);
 /* 全入力で即時再計算 */
 document.querySelectorAll("input,select").forEach(el=> el.addEventListener("input",recalc));
 
@@ -409,7 +408,7 @@ function readParams(){
     P0:num("stockPrice",FALLBACK.price),
     monthly:num("monthly",0),
     contribMonths:Math.round(num("contribYears",0))*12,
-    totalMonths:Math.round(num("simYears",1))*12,
+    totalMonths:($("simSame").checked?Math.round(num("contribYears",0)):Math.round(num("simYears",1)))*12,
     growth, bonusOn,
     nomuraInitShares:num("nomuraInit",0),   // 株数（小数2桁まで）
     pointsInit:num("pointsInit",0),
@@ -478,6 +477,9 @@ function fmtPct(r){return (Math.round(r*1000)/10)+"%";}
 let lastResult=null;
 
 function recalc(){
+  // 運用年数：チェック時は拠出年数に同期し編集不可にする
+  if($("simSame").checked){ $("simYears").value=$("contribYears").value; $("simYears").disabled=true; }
+  else { $("simYears").disabled=false; }
   const p=readParams();
   const res=simulate(p); lastResult=res;
   const last=res.last;
@@ -570,6 +572,7 @@ $("resetBtn").addEventListener("click",()=>{
   $("monthly").value=DEFAULTS.monthly;
   $("contribYears").value=DEFAULTS.contribYears;
   $("simYears").value=DEFAULTS.simYears;
+  $("simSame").checked=true;
   $("growthSel").value=DEFAULTS.growthSel;
   $("growthCustom").value=DEFAULTS.growthCustom;$("growthCustom").style.display="none";
   $("nomuraInit").value=DEFAULTS.nomuraInit;
@@ -578,9 +581,9 @@ $("resetBtn").addEventListener("click",()=>{
   $("bookMode").value=DEFAULTS.bookMode;$("customBookWrap").style.display="";
   $("firstUpdate").value=DEFAULTS.firstUpdate;
   $("updateCycle").value=DEFAULTS.updateCycle;
-  bonusOn=true;
-  bonusToggle.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.v==="1"));
-  $("bonusInfo").style.display="";
+  bonusOn=false;
+  bonusToggle.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.v==="0"));
+  $("bonusInfo").style.display="none";
   divOn=true;
   divToggle.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.v==="1"));
   recalc();
@@ -627,7 +630,7 @@ function applyQuote(q){
 
 recalc();
 loadQuote().then(applyQuote);
-window.addEventListener("resize",()=>{syncHeaderH();if(lastResult)drawChart(lastResult);});
+window.addEventListener("resize",()=>{if(lastResult)drawChart(lastResult);});
 </script>
 </body>
 </html>
