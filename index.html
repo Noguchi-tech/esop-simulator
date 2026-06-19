@@ -15,8 +15,9 @@
     background:var(--bg);color:var(--ink);line-height:1.55;font-size:15px;-webkit-text-size-adjust:100%}
 
   /* ===== 固定ヘッダ＋結果バー ===== */
-  header{position:sticky;top:0;z-index:30;background:#fff;border-bottom:2px solid var(--brand);
-    padding:8px 14px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+  /* position:fixed + visualViewport で、スマホのキーボード表示中もヘッダを画面上部に固定 */
+  header{position:fixed;top:0;left:0;right:0;z-index:30;background:#fff;border-bottom:2px solid var(--brand);
+    padding:8px 14px;box-shadow:0 2px 8px rgba(0,0,0,.06);will-change:transform}
   .hbar{display:flex;align-items:center;justify-content:space-between;gap:8px;max-width:880px;margin:0 auto}
   .hbar h1{margin:0;font-size:1.02rem;letter-spacing:.02em;white-space:nowrap}
   .rb-toggle{border:1px solid var(--line);background:#f3f6f9;color:var(--brand-d);border-radius:7px;
@@ -35,6 +36,9 @@
   .colead{text-align:center;font-size:.76rem;color:var(--sub);margin:0 0 12px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
   .card h2{font-size:.95rem;margin:0 0 12px;color:var(--sub)}
+  /* 主要カード（基本設定・結果）は下地を区別 */
+  .card.key{background:linear-gradient(180deg,#f3f8ff,#fff);border-color:#bcd3f5;box-shadow:0 1px 5px rgba(31,111,235,.08)}
+  .card.key>h2{color:var(--brand-d)}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   @media(max-width:520px){.grid{grid-template-columns:1fr}}
   .pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}  /* 常に左右2列 */
@@ -66,9 +70,16 @@
   /* summary */
   .sub3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
   @media(max-width:520px){.sub3{grid-template-columns:1fr 1fr}}
-  .stat{background:#f7f9fb;border:1px solid #e9eef2;border-radius:9px;padding:9px 10px}
-  .stat .k{font-size:.7rem;color:var(--sub)}
-  .stat .v{font-size:1rem;font-weight:800;margin-top:1px}
+  .stat{background:#fff;border:1px solid #e9eef2;border-left:5px solid #cbd3db;border-radius:9px;padding:9px 10px}
+  .stat .k{font-size:.7rem;font-weight:700}
+  .stat .v{font-size:1rem;font-weight:800;margin-top:1px;color:var(--ink)}
+  /* グラフの凡例と色を合わせ、口座と元本を直感的に区別 */
+  .stat.s-nomura{border-left-color:var(--nomura);background:#f2f8fe}
+  .stat.s-nomura .k{color:#1666d6}
+  .stat.s-point{border-left-color:var(--point);background:#fff7e9}
+  .stat.s-point .k{color:#bc7a12}
+  .stat.s-cum{border-left-style:dashed;border-left-color:var(--cum);background:#f4f5f7}
+  .stat.s-cum .k{color:var(--cum)}
   .note{font-size:.74rem;color:var(--sub);background:#fbfbfb;border:1px dashed var(--line);border-radius:10px;padding:11px 13px;margin-top:8px}
   .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
   table{border-collapse:collapse;width:100%;font-size:.78rem;min-width:520px}
@@ -111,7 +122,7 @@
   <div class="colead">株式会社良品計画（証券コード 7453）</div>
 
   <!-- 基本設定 -->
-  <div class="card">
+  <div class="card key">
     <h2>基本設定 <span class="live off" id="liveBadge">市場データ取得中…</span></h2>
     <div class="grid">
       <div>
@@ -243,12 +254,12 @@
   </div>
 
   <!-- サマリー詳細 -->
-  <div class="card">
+  <div class="card key">
     <h2>シミュレーション結果（内訳）</h2>
     <div class="sub3">
-      <div class="stat"><div class="k">野村口座</div><div class="v" id="nomuraVal">—</div></div>
-      <div class="stat"><div class="k" id="pointKey">退職金ポイント</div><div class="v" id="pointVal">—</div></div>
-      <div class="stat"><div class="k">累計本人拠出</div><div class="v" id="cumVal">—</div></div>
+      <div class="stat s-nomura"><div class="k">野村口座</div><div class="v" id="nomuraVal">—</div></div>
+      <div class="stat s-point"><div class="k" id="pointKey">退職金ポイント</div><div class="v" id="pointVal">—</div></div>
+      <div class="stat s-cum"><div class="k">累計本人拠出</div><div class="v" id="cumVal">—</div></div>
     </div>
     <div class="note" id="summaryNote"></div>
   </div>
@@ -281,7 +292,7 @@
       <p>持株会は、毎月の給与から決めた金額で自社株を買っていく制度です。毎月同じ金額で買うので、株価が高い時は少なく、安い時は多く買えます。長く続けるほど株数が積み上がり、会社が成長して株価が上がれば、将来の評価額も大きくなります。当社は通常の持株に加えて<strong>退職金ポイント</strong>もあるため、長く働く人ほどメリットが出やすい仕組みです。</p>
       <h3>メリット</h3>
       <ul>
-        <li>給与天引きなので、自然に積み立てられる</li>
+        <li>給与天引きなので、毎月の手続きが不要</li>
         <li>毎月買うため、買うタイミングを考えなくてよい</li>
         <li>会社の成長を、自分の資産形成につなげられる</li>
         <li>長く働くほど、退職金ポイントの効果が出やすい</li>
@@ -292,7 +303,8 @@
         <li>株なので評価額は上下する／元本保証ではない</li>
         <li>自社株に集中するため、リスクも偏る</li>
         <li>生活費を削ってまで高額拠出するものではない</li>
-        <li>退職時や売却時の税金は別途確認が必要</li>
+        <li>退職金ポイントの評価に使う信託簿価は変動するため、表示の評価額と実際の評価額が変わる可能性がある</li>
+        <li>退職後は口座の管理に手数料が発生する場合がある</li>
       </ul>
     </div>
   </div>
@@ -326,11 +338,32 @@ const touched = { stockPrice:false, dividend:false };
 const GRANT_RATE = 0.5;    // 退職金ポイント付与率（制度上固定）
 const BONUS_MONTHS = [6,12];
 
+/* ===== 固定ヘッダの制御 =====
+   position:fixed のヘッダ分だけ本文に余白を確保し、
+   スマホでキーボードが開いても visualViewport に合わせてヘッダを画面上部に保つ。 */
+const headerEl=document.querySelector("header");
+function syncHeaderH(){
+  document.body.style.paddingTop = headerEl.offsetHeight + "px";
+}
+function placeHeader(){
+  const vv=window.visualViewport;
+  // キーボード表示・ピンチズーム時も可視領域の最上部に貼り付ける
+  headerEl.style.transform = vv ? `translateY(${vv.offsetTop}px)` : "";
+}
+syncHeaderH(); placeHeader();
+window.addEventListener("load",()=>{syncHeaderH();placeHeader();});
+window.addEventListener("orientationchange",()=>{setTimeout(()=>{syncHeaderH();placeHeader();},250);});
+if(window.visualViewport){
+  window.visualViewport.addEventListener("resize",()=>{syncHeaderH();placeHeader();});
+  window.visualViewport.addEventListener("scroll",placeHeader);
+}
+
 /* 結果バーの表示/非表示 */
 const barToggle=$("barToggle");
 barToggle.addEventListener("click",()=>{
   const hidden=$("resultBar").classList.toggle("hidden");
   barToggle.textContent=hidden?"結果を表示":"結果を隠す";
+  syncHeaderH(); placeHeader();
 });
 
 /* 折りたたみセクション */
@@ -603,7 +636,7 @@ function applyQuote(q){
 
 recalc();
 loadQuote().then(applyQuote);
-window.addEventListener("resize",()=>{if(lastResult)drawChart(lastResult);});
+window.addEventListener("resize",()=>{syncHeaderH();placeHeader();if(lastResult)drawChart(lastResult);});
 </script>
 </body>
 </html>
