@@ -43,6 +43,7 @@
   .card.key>h2{color:var(--brand-d)}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   @media(max-width:520px){.grid{grid-template-columns:1fr}}
+  .grid.basic{grid-template-columns:1fr}  /* 基本設定は順序優先で1カラム */
   .pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}  /* 常に左右2列 */
   label.field{display:block;font-size:.8rem;color:var(--sub);margin-bottom:3px;font-weight:600}
   .hint{font-size:.72rem;color:#8a94a0;font-weight:400;margin-top:3px}
@@ -119,19 +120,14 @@
   <!-- 基本設定 -->
   <div class="card key">
     <h2>基本設定 <span class="live off" id="liveBadge">市場データ取得中…</span></h2>
-    <div class="grid">
-      <div>
-        <label class="field">現在の株価（円）</label>
-        <input type="number" id="stockPrice" value="3496" min="1" step="1">
-        <div class="hint" id="priceHint">市場株価（前営業日終値）を初期値に設定</div>
-      </div>
+    <div class="grid basic">
       <div>
         <label class="field">毎月の拠出額（円）</label>
         <input type="number" id="monthly" value="1000" min="1000" step="1000">
         <div class="hint nowrap">給与から毎月積み立てる金額（1,000円以上・1,000円単位）</div>
       </div>
       <!-- 拠出年数・運用年数は常に左右2列 -->
-      <div class="pair" style="grid-column:1/-1">
+      <div class="pair">
         <div>
           <label class="field">拠出する年数（年）</label>
           <input type="number" id="contribYears" value="10" min="0" max="60" step="1">
@@ -145,6 +141,11 @@
           </div>
           <div class="hint" id="simLockHint">🔒 拠出年数と同じ（タップで解除して任意入力）</div>
         </div>
+      </div>
+      <div>
+        <label class="field">現在の株価（円）</label>
+        <input type="number" id="stockPrice" value="3496" min="1" step="1">
+        <div class="hint" id="priceHint">市場株価（前営業日終値）を初期値に設定</div>
       </div>
       <div>
         <label class="field">年平均成長率</label>
