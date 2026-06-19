@@ -13,14 +13,31 @@
   *{box-sizing:border-box}
   body{margin:0;font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
     background:var(--bg);color:var(--ink);line-height:1.55;font-size:15px;-webkit-text-size-adjust:100%}
-  header{background:#fff;border-bottom:2px solid var(--brand);padding:14px 16px;text-align:center}
-  header h1{margin:0;font-size:1.15rem;letter-spacing:.02em}
-  header .co{font-size:.78rem;color:var(--sub);margin-top:3px}
+
+  /* ===== 固定ヘッダ＋結果バー ===== */
+  header{position:sticky;top:0;z-index:30;background:#fff;border-bottom:2px solid var(--brand);
+    padding:8px 14px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+  .hbar{display:flex;align-items:center;justify-content:space-between;gap:8px;max-width:880px;margin:0 auto}
+  .hbar h1{margin:0;font-size:1.02rem;letter-spacing:.02em;white-space:nowrap}
+  .rb-toggle{border:1px solid var(--line);background:#f3f6f9;color:var(--brand-d);border-radius:7px;
+    padding:5px 10px;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap}
+  .resultbar{max-width:880px;margin:6px auto 0;display:flex;gap:8px;align-items:stretch}
+  .resultbar.hidden{display:none}
+  .rb-cell{background:linear-gradient(135deg,#eef5ff,#e6efff);border:1px solid #cfe0ff;border-radius:9px;
+    padding:5px 10px;min-width:0}
+  .rb-cell.main{flex:1}
+  .rb-cell.gaincell{flex:0 0 auto;background:#f1f8f4;border-color:#cfe9d9}
+  .rb-lab{display:block;font-size:.64rem;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rb-val{display:block;font-size:1.25rem;font-weight:800;color:var(--brand-d);line-height:1.25;white-space:nowrap}
+  .rb-gain{display:block;font-size:1.02rem;font-weight:800;color:var(--good);line-height:1.25;white-space:nowrap}
+
   .wrap{max-width:880px;margin:0 auto;padding:14px}
+  .colead{text-align:center;font-size:.76rem;color:var(--sub);margin:0 0 12px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
   .card h2{font-size:.95rem;margin:0 0 12px;color:var(--sub)}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   @media(max-width:520px){.grid{grid-template-columns:1fr}}
+  .pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}  /* 常に左右2列 */
   label.field{display:block;font-size:.8rem;color:var(--sub);margin-bottom:3px;font-weight:600}
   .hint{font-size:.72rem;color:#8a94a0;font-weight:400;margin-top:3px}
   .hint.nowrap{white-space:nowrap;font-size:.68rem}
@@ -47,12 +64,6 @@
   button.act{border:none;border-radius:8px;padding:9px 16px;font-size:.85rem;cursor:pointer;font-weight:700}
   .ghost{background:#eef1f4;color:var(--ink)}
   /* summary */
-  .total{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;
-    background:linear-gradient(135deg,#eef5ff,#e6efff);border:1px solid #cfe0ff;border-radius:10px;padding:12px 14px;margin-bottom:10px}
-  .total .lab{font-size:.72rem;color:var(--sub)}
-  .total .big{font-size:1.6rem;font-weight:800;color:var(--brand-d);line-height:1.2}
-  .total .gain{font-size:.82rem;color:var(--good);opacity:.85;text-align:right}
-  .total .gain b{display:block;font-size:1rem;font-weight:700}
   .sub3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
   @media(max-width:520px){.sub3{grid-template-columns:1fr 1fr}}
   .stat{background:#f7f9fb;border:1px solid #e9eef2;border-radius:9px;padding:9px 10px}
@@ -80,11 +91,24 @@
 </head>
 <body>
 <header>
-  <h1>持株会シミュレーター</h1>
-  <div class="co">株式会社良品計画（証券コード 7453）</div>
+  <div class="hbar">
+    <h1>持株会シミュレーター</h1>
+    <button type="button" id="barToggle" class="rb-toggle">結果を隠す</button>
+  </div>
+  <div class="resultbar" id="resultBar">
+    <div class="rb-cell main">
+      <span class="rb-lab" id="barLab">合計評価額</span>
+      <span class="rb-val" id="barTotal">—</span>
+    </div>
+    <div class="rb-cell gaincell">
+      <span class="rb-lab">評価益の目安</span>
+      <span class="rb-gain" id="barGain">—</span>
+    </div>
+  </div>
 </header>
 
 <div class="wrap">
+  <div class="colead">株式会社良品計画（証券コード 7453）</div>
 
   <!-- 基本設定 -->
   <div class="card">
@@ -100,15 +124,18 @@
         <input type="number" id="monthly" value="1000" min="1000" step="1000">
         <div class="hint nowrap">給与から毎月積み立てる金額（1,000円以上・1,000円単位）</div>
       </div>
-      <div>
-        <label class="field">拠出する年数（年）</label>
-        <input type="number" id="contribYears" value="10" min="0" max="60" step="1">
-        <div class="hint">あと何年、積立を続けるか</div>
-      </div>
-      <div>
-        <label class="field">運用する年数（年）</label>
-        <input type="number" id="simYears" value="10" min="1" max="70" step="1">
-        <div class="hint">退職後の保有期間も含めた合計年数</div>
+      <!-- 拠出年数・運用年数は常に左右2列 -->
+      <div class="pair" style="grid-column:1/-1">
+        <div>
+          <label class="field">拠出する年数（年）</label>
+          <input type="number" id="contribYears" value="10" min="0" max="60" step="1">
+          <div class="hint">あと何年、積立を続けるか</div>
+        </div>
+        <div>
+          <label class="field">運用する年数（年）</label>
+          <input type="number" id="simYears" value="10" min="1" max="70" step="1">
+          <div class="hint">退職後も含む合計年数</div>
+        </div>
       </div>
       <div>
         <label class="field">年平均成長率</label>
@@ -173,7 +200,7 @@
           <div class="hint" id="divHint">市場データの予想／実績配当を初期値に設定。任意で変更できます。</div>
         </div>
       </div>
-      <div class="info" id="divInfo">配当再投資は<strong>野村口座のみ</strong>に支払われ、退職金ポイント口座には拠出されません。<strong>再投資は拠出期間中のみ</strong>行い、退職後は行いません。配当利回りは初期値ベースで一定とみなし、株価成長に連動して増えていく前提です。</div>
+      <div class="info" id="divInfo">配当再投資は<strong>野村口座のみ</strong>に支払われ、退職金ポイント口座には拠出されません。<strong>退職後も継続して再投資する前提</strong>です。配当利回りは初期値ベースで一定とみなし、株価成長に連動して増えていく前提です。</div>
     </div>
   </div>
 
@@ -215,16 +242,9 @@
     <button type="button" class="act ghost" id="resetBtn">↺ 初期値にリセット</button>
   </div>
 
-  <!-- サマリー -->
+  <!-- サマリー詳細 -->
   <div class="card">
-    <h2>シミュレーション結果</h2>
-    <div class="total">
-      <div>
-        <div class="lab" id="totalLab">運用後の合計評価額</div>
-        <div class="big" id="totalVal">—</div>
-      </div>
-      <div class="gain"><span>評価益の目安</span><b id="gainVal">—</b></div>
-    </div>
+    <h2>シミュレーション結果（内訳）</h2>
     <div class="sub3">
       <div class="stat"><div class="k">野村口座</div><div class="v" id="nomuraVal">—</div></div>
       <div class="stat"><div class="k" id="pointKey">退職金ポイント</div><div class="v" id="pointVal">—</div></div>
@@ -305,6 +325,13 @@ const touched = { stockPrice:false, dividend:false };
 
 const GRANT_RATE = 0.5;    // 退職金ポイント付与率（制度上固定）
 const BONUS_MONTHS = [6,12];
+
+/* 結果バーの表示/非表示 */
+const barToggle=$("barToggle");
+barToggle.addEventListener("click",()=>{
+  const hidden=$("resultBar").classList.toggle("hidden");
+  barToggle.textContent=hidden?"結果を表示":"結果を隠す";
+});
 
 /* 折りたたみセクション */
 document.querySelectorAll(".sec > .head").forEach(h=>{
@@ -395,9 +422,9 @@ function simulate(p, annualOverride){
       cum+=c;
       if(book>0) points+=(c*GRANT_RATE)/book; // 退職金ポイントは拠出分のみ（配当は付かない）
     }
-    // 配当の再投資：拠出期間中のみ、野村口座の保有株に対して株を買い増す
-    // （退職後は再投資しない／ポイント口座には拠出しない）
-    if(mDiv>0 && price>0 && m<=p.contribMonths){
+    // 配当の再投資：野村口座の保有株のみ。退職後も継続して株を買い増す
+    // （ポイント口座には拠出しない）
+    if(mDiv>0 && price>0){
       const div=shares*price*mDiv;
       divCum+=div;
       shares+=div/price;
@@ -435,9 +462,12 @@ function recalc(){
   const invested=last.cum+p.nomuraInitShares*p.P0;   // 既存株は現在株価で取得したとみなす
   const gain=last.total-invested;
 
-  $("totalLab").textContent=`運用${p.totalMonths/12}年後の合計評価額（成長率 ${fmtPct(p.growth)}）`;
-  $("totalVal").textContent=fmtYen(last.total);
-  $("gainVal").textContent=(gain>=0?"+":"")+fmtYen(gain);
+  // 固定の結果バー
+  $("barLab").textContent=`合計評価額（${p.totalMonths/12}年・成長率${fmtPct(p.growth)}）`;
+  $("barTotal").textContent=fmtYen(last.total);
+  $("barGain").textContent=(gain>=0?"+":"")+fmtYen(gain);
+
+  // 内訳
   $("nomuraVal").textContent=fmtYen(last.nomura);
   $("pointKey").textContent=pointLabel;
   $("pointVal").textContent=fmtYen(last.point);
@@ -446,7 +476,7 @@ function recalc(){
   let note=`評価益の目安 ＝ 合計評価額 −（既存保有株の現在評価額 ＋ 累計本人拠出額）。`;
   if(p.divOn){
     const yld=p.P0>0?p.dividend/p.P0:0;
-    note+=`<br>配当（1株あたり年間 ${fmtNum(p.dividend)}円・利回り約${fmtPct(yld)}）を野村口座のみに再投資（拠出期間中のみ・退職後は再投資なし）。累計の配当再投資額 ≈ ${fmtShort(last.divCum)}。`;
+    note+=`<br>配当（1株あたり年間 ${fmtNum(p.dividend)}円・利回り約${fmtPct(yld)}）を野村口座のみに再投資（退職後も継続）。累計の配当再投資額 ≈ ${fmtShort(last.divCum)}。`;
   }
   if(retiredEver){
     note+=`<br>拠出は${res.contribYears}年で終了し、その後は退職金ポイントを退職時の時価で評価した<strong>特定口座移管分</strong>として表示しています。`;
