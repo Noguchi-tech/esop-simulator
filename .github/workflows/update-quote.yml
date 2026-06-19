@@ -1,0 +1,48 @@
+name: 市場データの自動更新（株価・配当）
+
+# 良品計画（7453）の株価・配当を定期取得して data/quote.json を更新します。
+# APIキーは不要です（Yahoo Finance の公開エンドポイントを使用）。
+#
+# 注意：schedule（定期実行）は「デフォルトブランチ（main）」に置かれている場合のみ動きます。
+#       feature ブランチに置いている間は、Actions タブの「Run workflow」（workflow_dispatch）から
+#       手動で実行できます。main にマージすると自動更新が始まります。
+
+on:
+  schedule:
+    # 毎営業日 07:00 UTC（＝16:00 JST、東証クローズ後）に実行
+    - cron: "0 7 * * 1-5"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-quote
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Fetch quote & dividend
+        run: node scripts/fetch-quote.mjs
+
+      - name: Commit if changed
+        run: |
+          if [ -n "$(git status --porcelain data/quote.json)" ]; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/quote.json
+            git commit -m "chore(data): update market quote for 7453 [skip ci]"
+            git push
+          else
+            echo "No change in data/quote.json"
+          fi
