@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
 <title>持株会シミュレーター｜株式会社良品計画</title>
 <style>
   :root{
@@ -12,8 +12,12 @@
   }
   *{box-sizing:border-box}
   html,body{height:100%}
+  /* アプリ全体をビューポートに固定（position:fixed）。
+     これにより iOS でも「ページ自体」はスクロールできず、入力にフォーカスしても
+     ヘッダは動かない。スクロールは内側の #scroller だけが担当する。 */
   body{margin:0;font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
     background:var(--bg);color:var(--ink);line-height:1.55;font-size:15px;-webkit-text-size-adjust:100%;
+    position:fixed;top:0;left:0;right:0;bottom:0;
     display:flex;flex-direction:column;overflow:hidden}
 
   /* ===== 固定ヘッダ＋結果バー（アプリシェル構成） =====
@@ -114,7 +118,6 @@
 <header>
   <div class="hbar">
     <h1>持株会シミュレーター</h1>
-    <button type="button" id="barToggle" class="rb-toggle">結果を隠す</button>
   </div>
   <div class="resultbar" id="resultBar">
     <div class="rb-cell main">
@@ -306,6 +309,7 @@
       <p>持株会は、毎月の給与から決めた金額で自社株を買っていく制度です。毎月同じ金額で買うので、株価が高い時は少なく、安い時は多く買えます。長く続けるほど株数が積み上がり、会社が成長して株価が上がれば、将来の評価額も大きくなります。当社は通常の持株に加えて<strong>退職金ポイント</strong>もあるため、長く働く人ほどメリットが出やすい仕組みです。</p>
       <h3>メリット</h3>
       <ul>
+        <li>拠出の初月は、拠出額に応じて会社から拠出金の上乗せがある</li>
         <li>給与天引きなので、毎月の手続きが不要</li>
         <li>毎月買うため、買うタイミングを考えなくてよい</li>
         <li>会社の成長を、自分の資産形成につなげられる</li>
@@ -353,13 +357,6 @@ const touched = { stockPrice:false, dividend:false };
 
 const GRANT_RATE = 0.5;    // 退職金ポイント付与率（制度上固定）
 const BONUS_MONTHS = [6,12];
-
-/* 結果バーの表示/非表示（アプリシェルなので余白調整は不要） */
-const barToggle=$("barToggle");
-barToggle.addEventListener("click",()=>{
-  const hidden=$("resultBar").classList.toggle("hidden");
-  barToggle.textContent=hidden?"結果を表示":"結果を隠す";
-});
 
 /* 折りたたみセクション */
 document.querySelectorAll(".sec > .head").forEach(h=>{
