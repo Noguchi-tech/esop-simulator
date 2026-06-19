@@ -204,9 +204,9 @@
           <div class="hint">配当は再投資（株の買い増し）として概算反映します。</div>
         </div>
         <div>
-          <label class="field">1株あたり年間配当（円）</label>
-          <input type="number" id="dividend" value="30" min="0" step="0.5">
-          <div class="hint" id="divHint">市場データの予想／実績配当を初期値に設定。任意で変更できます。</div>
+          <label class="field">1株あたり年間配当（円・会社予想）</label>
+          <input type="number" id="dividend" value="32" min="0" step="0.5">
+          <div class="hint" id="divHint">会社予想（IR）の年間配当を初期値に設定。任意で変更できます。</div>
         </div>
       </div>
       <div class="info" id="divInfo">配当再投資は<strong>野村口座のみ</strong>に支払われ、退職金ポイント口座には拠出されません。<strong>退職後も継続して再投資する前提</strong>です。配当利回りは初期値ベースで一定とみなし、株価成長に連動して増えていく前提です。</div>
@@ -339,11 +339,11 @@ const DEFAULTS = {
   growthSel:"0.05", growthCustom:5, bonus:0,
   nomuraInit:0, pointsInit:0, bookValue:1121, bookMode:"custom",
   firstUpdate:2, updateCycle:5,
-  divOn:1, dividend:30
+  divOn:1, dividend:32
 };
 /* 市場データの初期値（data/quote.json から上書きされる）。
    フォールバック（取得失敗時）の値も兼ねる。 */
-const FALLBACK = { price:3496, dividend:30 };
+const FALLBACK = { price:3496, dividend:32 };
 /* 自動取得した市場データ（取得後に反映） */
 let QUOTE = null;
 /* ユーザーが手入力で触れたか（触れた項目は自動値で上書きしない） */
