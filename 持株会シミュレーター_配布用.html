@@ -41,6 +41,11 @@
   /* 主要カード（基本設定・結果）は下地を区別 */
   .card.key{background:linear-gradient(180deg,#f3f8ff,#fff);border-color:#bcd3f5;box-shadow:0 1px 5px rgba(31,111,235,.08)}
   .card.key>h2{color:var(--brand-d)}
+  /* 「まずここを入力」バッジ：基本設定を他の入力欄と区別 */
+  .firstbadge{display:inline-block;font-size:.68rem;font-weight:800;color:#fff;background:var(--point);
+    border-radius:999px;padding:2px 9px;margin-left:7px;vertical-align:1px;white-space:nowrap;letter-spacing:.02em}
+  /* 注釈（ボーナス有無など） */
+  .anno{font-size:.72rem;font-weight:600;color:var(--brand-d)}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   @media(max-width:520px){.grid{grid-template-columns:1fr}}
   .grid.basic{grid-template-columns:1fr}  /* 基本設定は順序優先で1カラム */
@@ -120,9 +125,9 @@
 
 <div class="wrap">
 
-  <!-- 基本設定 -->
+  <!-- 基本設定（スタッフが入力するのはここだけ） -->
   <div class="card key">
-    <h2>基本設定 <span class="live on" id="liveBadge">現在値</span></h2>
+    <h2>基本設定<span class="firstbadge">まずここを入力</span> <span class="live on" id="liveBadge">現在値</span></h2>
     <div class="grid basic">
       <div>
         <label class="field">毎月の拠出額（円）</label>
@@ -145,23 +150,35 @@
           <div class="hint" id="simLockHint">🔒 拠出年数と同じ（タップで解除して任意入力）</div>
         </div>
       </div>
-      <div>
-        <label class="field">年平均成長率</label>
-        <select id="growthSel">
-          <option value="0.03">3%</option>
-          <option value="0.05" selected>5%</option>
-          <option value="0.07">7%</option>
-          <option value="custom">カスタム入力</option>
-        </select>
-        <input type="number" id="growthCustom" value="5" min="-50" max="100" step="0.1" style="display:none;margin-top:6px">
-      </div>
-      <div>
-        <label class="field">ボーナス拠出</label>
-        <div class="toggle" id="bonusToggle">
-          <button type="button" data-v="1">あり</button>
-          <button type="button" data-v="0" class="on">なし</button>
+    </div>
+  </div>
+
+  <!-- 詳細設定（折りたたみ・初期非表示） -->
+  <div class="sec" id="secAdvanced">
+    <button type="button" class="head" data-sec="secAdvanced">
+      <span>詳細設定（年平均成長率・ボーナス拠出）</span><span class="arr">▶</span>
+    </button>
+    <div class="body">
+      <div class="grid">
+        <div>
+          <label class="field">年平均成長率</label>
+          <select id="growthSel">
+            <option value="0.03">3%</option>
+            <option value="0.05" selected>5%</option>
+            <option value="0.07">7%</option>
+            <option value="custom">カスタム入力</option>
+          </select>
+          <input type="number" id="growthCustom" value="5" min="-50" max="100" step="0.1" style="display:none;margin-top:6px">
+          <div class="hint">将来の株価が年あたり平均で何％成長するかの想定値</div>
         </div>
-        <div class="info" id="bonusInfo" style="display:none">6月・12月に、毎月拠出額の2倍を賞与から自動で追加拠出します。</div>
+        <div>
+          <label class="field">ボーナス拠出 <span class="anno">（社員は「あり」にする）</span></label>
+          <div class="toggle" id="bonusToggle">
+            <button type="button" data-v="1">あり</button>
+            <button type="button" data-v="0" class="on">なし</button>
+          </div>
+          <div class="info" id="bonusInfo" style="display:none">6月・12月に、毎月拠出額の2倍を賞与から自動で追加拠出します。</div>
+        </div>
       </div>
     </div>
   </div>
