@@ -2,10 +2,10 @@
   "symbol": "7453.T",
   "name": "株式会社良品計画",
   "currency": "JPY",
-  "price": 4055,
+  "price": 4003,
   "annualDividendPerShare": 32,
-  "dividendYield": 0.0079,
-  "asOf": "2026-09-14",
+  "dividendYield": 0.008,
+  "asOf": "2026-09-15",
   "source": "Yahoo Finance (price, no key)",
   "dividendSource": "IR予想（2026年8月期 予想 32円）"
 }
